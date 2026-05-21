@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordlist Pro | Interactive Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00d2ff;
+            --secondary: #3a7bd5;
+            --bg: #050b18;
+            --card-bg: rgba(15, 23, 42, 0.85);
+            --text: #f8fafc;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Canvas for the shooting stars */
+        #starCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none; /* Let clicks pass through to the form */
+        }
+
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 210, 255, 0.1);
+            width: 100%;
+            max-width: 450px;
+            z-index: 10;
+            position: relative;
+        }
+
+        h2 {
+            text-align: center;
+            font-weight: 800;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+            color: var(--primary);
+            text-transform: uppercase;
+        }
+
+        .input-group { margin-bottom: 20px; }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #334155;
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0, 210, 255, 0.4); }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none;
+            margin-right: 10px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<canvas id="starCanvas"></canvas>
+
+<div class="container">
+    <h2>Wordlist Pro</h2>
+    <form id="genForm" action="/generate" method="post">
+        <div class="input-group">
+            <label>Seed Words</label>
+            <input type="text" name="words" placeholder="admin, wifi, password" required>
+        </div>
+        <div class="input-group">
+            <label>Number Ranges</label>
+            <input type="text" name="numbers" placeholder="1-10, 20, 30-40" required>
+        </div>
+        <div class="input-group">
+            <label>Special Characters</label>
+            <input type="text" name="symbols" placeholder="!, @, #, $" required>
+        </div>
+        <div style="display: flex; gap: 15px;">
+            <div style="flex: 2;"><label>Target Count</label><input type="number" name="target" value="5000000"></div>
+            <div style="flex: 1;"><label>File Name</label><input type="text" name="fileName" value="wordlist"></div>
+        </div>
+        <button type="submit" id="submitBtn">
+            <div class="spinner" id="spinner"></div>
+            <span id="btnText">EXECUTE GENERATION</span>
+        </button>
+    </form>
+</div>
+
+<script>
+    const canvas = document.getElementById('starCanvas');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    class ShootingStar {
+        constructor(x, y, isMouse = false) {
+            this.x = x;
+            this.y = y;
+            this.isMouse = isMouse;
+            this.speed = isMouse ? Math.random() * 10 + 10 : Math.random() * 5 + 5;
+            this.len = Math.random() * 80 + 50;
+            this.opacity = 1;
+            this.angle = Math.PI / 4; // 45 degrees
+        }
+
+        draw() {
+            ctx.strokeStyle = `rgba(0, 210, 255, ${this.opacity})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y);
+            ctx.lineTo(this.x - Math.cos(this.angle) * this.len, this.y - Math.sin(this.angle) * this.len);
+            ctx.stroke();
+        }
+
+        update() {
+            this.x += Math.cos(this.angle) * this.speed;
+            this.y += Math.sin(this.angle) * this.speed;
+            this.opacity -= 0.01;
+        }
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Random background stars
+        if (Math.random() < 0.05) {
+            stars.push(new ShootingStar(Math.random() * canvas.width, Math.random() * canvas.height));
+        }
+
+        stars.forEach((star, index) => {
+            star.update();
+            star.draw();
+            if (star.opacity <= 0) stars.splice(index, 1);
+        });
+        requestAnimationFrame(animate);
+    }
+    animate();
+
+    // Cursor Star Spawn
+    window.addEventListener('mousemove', (e) => {
+        if (Math.random() < 0.1) { // Control density of cursor stars
+            stars.push(new ShootingStar(e.clientX, e.clientY, true));
+        }
+    });
+
+    // Form Logic
+    const form = document.getElementById('genForm');
+    const btn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('spinner');
+    const btnText = document.getElementById('btnText');
+
+    form.onsubmit = function() {
+        btn.disabled = true;
+        spinner.style.display = 'inline-block';
+        btnText.innerText = 'GENERATING...';
+        // Note: The actual generation happens on the server
+        // This timeout is just for UI feedback
+        setTimeout(() => {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+            btnText.innerText = 'EXECUTE GENERATION';
+        }, 5000);
+    };
+</script>
+</body>
+</html>
